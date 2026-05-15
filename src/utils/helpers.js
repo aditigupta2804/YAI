@@ -1,10 +1,29 @@
 // Utility functions for formatting and calculations
 
+const CURRENCY_RATES = {
+  USD: 1,
+  INR: 83,
+  EUR: 0.93,
+  IDR: 15600,
+  JPY: 148,
+};
+
+const CURRENCY_LOCALES = {
+  USD: 'en-US',
+  INR: 'en-IN',
+  EUR: 'de-DE',
+  IDR: 'id-ID',
+  JPY: 'ja-JP',
+};
+
 export const formatCurrency = (amount, currency = 'USD') => {
-  return new Intl.NumberFormat('en-US', {
+  const numericAmount = Number(amount) || 0;
+
+  return new Intl.NumberFormat(CURRENCY_LOCALES[currency] || 'en-US', {
     style: 'currency',
     currency,
-  }).format(amount);
+    maximumFractionDigits: currency === 'IDR' ? 0 : 0,
+  }).format(numericAmount);
 };
 
 export const calculateTotalCost = (days, dailyCost, travelers) => {
@@ -67,39 +86,67 @@ export const debounce = (func, wait) => {
 
 export const getWeatherEmoji = (condition) => {
   const conditions = {
-    'Sunny': '☀️',
-    'Cloudy': '☁️',
-    'Rainy': '🌧️',
-    'Snowy': '❄️',
-    'Windy': '💨',
-    'Stormy': '⛈️',
+    Sunny: '☀️',
+    Cloudy: '☁️',
+    Rainy: '🌧️',
+    Snowy: '❄️',
+    Windy: '💨',
+    Stormy: '⛈️',
   };
   return conditions[condition] || '🌡️';
 };
 
-// Currency utilities
-const USD_TO_INR = 83; // Approximate exchange rate
+export const getCurrencyForDestination = (destination) => {
+  const normalized = (destination || '').toLowerCase();
+
+  if (/india|delhi|mumbai|bangalore|kolkata|goa|kerala|chennai|jaipur|agra|uttar pradesh|tamil nadu|karnataka|hyderabad/.test(normalized)) {
+    return 'INR';
+  }
+
+  if (/france|paris|lyon|nice|bordeaux|toulouse/.test(normalized)) {
+    return 'EUR';
+  }
+
+  if (/indonesia|bali|jakarta|ubud|denpasar|kuta|nusa penida/.test(normalized)) {
+    return 'IDR';
+  }
+
+  if (/japan|tokyo|kyoto|osaka|sapporo/.test(normalized)) {
+    return 'JPY';
+  }
+
+  if (/usa|united states|new york|los angeles|san francisco|chicago|miami/.test(normalized)) {
+    return 'USD';
+  }
+
+  return undefined;
+};
 
 export const getCurrencySymbol = (currency) => {
-  return currency === 'INR' ? '₹' : '$';
+  switch (currency) {
+    case 'INR':
+      return '₹';
+    case 'EUR':
+      return '€';
+    case 'IDR':
+      return 'Rp';
+    case 'JPY':
+      return '¥';
+    case 'USD':
+    default:
+      return '$';
+  }
 };
 
 export const convertCurrency = (amount, fromCurrency, toCurrency) => {
-  if (fromCurrency === toCurrency) return amount;
-  if (fromCurrency === 'USD' && toCurrency === 'INR') {
-    return Math.round(amount * USD_TO_INR);
-  }
-  if (fromCurrency === 'INR' && toCurrency === 'USD') {
-    return Math.round(amount / USD_TO_INR);
-  }
-  return amount;
+  const numericAmount = Number(amount) || 0;
+  if (fromCurrency === toCurrency) return numericAmount;
+  const fromRate = CURRENCY_RATES[fromCurrency] || 1;
+  const toRate = CURRENCY_RATES[toCurrency] || 1;
+  const amountInUSD = numericAmount / fromRate;
+  return Math.round(amountInUSD * toRate);
 };
 
 export const formatPriceWithCurrency = (amount, currency = 'USD') => {
-  const symbol = getCurrencySymbol(currency);
-  const formatter = new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-  return `${symbol}${formatter.format(amount)}`;
+  return formatCurrency(amount, currency);
 };

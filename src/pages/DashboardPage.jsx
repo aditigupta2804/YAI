@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useTripStore, useItineraryStore } from '../store/store';
 import { tripPlannerService } from '../services/tripPlannerService';
-import { formatPriceWithCurrency, convertCurrency } from '../utils/helpers';
+import { formatPriceWithCurrency, convertCurrency, getCurrencyForDestination, getCurrencySymbol } from '../utils/helpers';
 import ItineraryDay from '../components/ItineraryDay';
 import HotelCard from '../components/HotelCard';
 import RestaurantCard from '../components/RestaurantCard';
@@ -22,9 +22,18 @@ const DashboardPage = ({ onBack }) => {
   const [trains, setTrains] = useState([]);
   const [weather, setWeather] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
   
   // Modal states
   const [bookingModal, setBookingModal] = useState({ isOpen: false, type: '', title: '' });
+
+  const handleDownload = () => {
+    setMessage('Download feature coming soon.');
+  };
+
+  const handleShare = () => {
+    setMessage('Share feature coming soon.');
+  };
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -40,11 +49,11 @@ const DashboardPage = ({ onBack }) => {
 
         // Fetch all supporting data in parallel
         const [hotelsData, restaurantsData, weatherData, experiencesData, trainsData] = await Promise.all([
-          tripPlannerService.getHotels(),
-          tripPlannerService.getRestaurants(),
+          tripPlannerService.getHotels(tripData.destination),
+          tripPlannerService.getRestaurants(tripData.destination),
           tripPlannerService.getWeatherForecast(tripData.destination),
-          tripPlannerService.getLocalExperiences(),
-          tripPlannerService.getTrains(tripData.destination, ''),
+          tripPlannerService.getLocalExperiences(tripData.destination),
+          tripPlannerService.getTrains(tripData.destination),
         ]);
 
         setHotels(hotelsData);
@@ -63,6 +72,10 @@ const DashboardPage = ({ onBack }) => {
   }, [tripData, setItinerary]);
 
   const totalCost = itinerary.reduce((sum, day) => sum + parseFloat(day.estimatedCost || 0), 0);
+  const localCurrency = getCurrencyForDestination(tripData.destination) || tripData.currency;
+  const localBudget = tripData.budget
+    ? formatPriceWithCurrency(convertCurrency(tripData.budget, tripData.currency, localCurrency), localCurrency)
+    : null;
 
   const handleQuickAction = (type) => {
     if (type === 'flight') {
@@ -121,6 +134,7 @@ const DashboardPage = ({ onBack }) => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleDownload}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium"
             >
               <Download size={18} />
@@ -129,6 +143,7 @@ const DashboardPage = ({ onBack }) => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleShare}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium"
             >
               <Share2 size={18} />
@@ -174,14 +189,21 @@ const DashboardPage = ({ onBack }) => {
                     <span>{tripData.travelers} Travelers</span>
                   </div>
                   <div className="flex items-center gap-3 text-gray-300">
-                    {tripData.currency === 'INR' ? (
-                      <IndianRupee size={18} className="text-orange-400" />
-                    ) : (
-                      <DollarSign size={18} className="text-green-400" />
-                    )}
+                    <span className="text-lg text-white">{getCurrencySymbol(tripData.currency)}</span>
                     <span>{formatPriceWithCurrency(tripData.budget, tripData.currency)} Budget</span>
                   </div>
+                  {localCurrency && localCurrency !== tripData.currency && localBudget && (
+                    <div className="flex items-center gap-3 text-gray-400 text-sm mt-2">
+                      <span>Local estimate:</span>
+                      <span className="font-semibold text-white">{localBudget}</span>
+                    </div>
+                  )}
                 </div>
+                {message && (
+                  <div className="p-3 rounded-2xl bg-purple-700/20 border border-purple-500 text-sm text-white">
+                    {message}
+                  </div>
+                )}
 
                 <div className="pt-4 border-t border-gray-700">
                   <p className="text-xs text-gray-400 mb-2">Total Estimated Cost</p>
@@ -273,7 +295,8 @@ const DashboardPage = ({ onBack }) => {
                       key={day.day}
                       day={day.day}
                       activities={day.activities}
-                      estimatedCost={day.estimatedCost}
+                      estimatedCost={parseFloat(day.estimatedCost)}
+                      currency={tripData.currency}
                       meals={day.meals}
                     />
                   ))}

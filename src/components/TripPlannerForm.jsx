@@ -1,11 +1,16 @@
 import { motion } from 'framer-motion';
 import { Plane, MapPin, DollarSign, Users, Calendar, Sparkles, IndianRupee } from 'lucide-react';
 import { useTripStore } from '../store/store';
+import { formatPriceWithCurrency, convertCurrency, getCurrencyForDestination } from '../utils/helpers';
 
 const TripPlannerForm = ({ onSubmit }) => {
   const { tripData, setTripData, addInterest, removeInterest } = useTripStore();
 
   const interests = ['Heritage', 'Adventure', 'Nightlife', 'Food', 'Nature', 'Spiritual', 'Luxury', 'Family'];
+  const localCurrency = getCurrencyForDestination(tripData.destination);
+  const localBudget = tripData.budget && tripData.currency && localCurrency
+    ? formatPriceWithCurrency(convertCurrency(tripData.budget, tripData.currency, localCurrency), localCurrency)
+    : null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,9 +38,16 @@ const TripPlannerForm = ({ onSubmit }) => {
           <MapPin className="absolute left-4 top-4 text-purple-400 group-focus-within:text-purple-300 transition-colors" size={20} />
           <input
             type="text"
-            placeholder="Enter destination (e.g., Paris, Tokyo, Bali)"
+            placeholder="Enter destination (e.g., Paris, Tokyo, Bali, India)"
             value={tripData.destination}
-            onChange={(e) => setTripData({ destination: e.target.value })}
+            onChange={(e) => {
+              const nextDestination = e.target.value;
+              const nextCurrency = getCurrencyForDestination(nextDestination);
+              setTripData({
+                destination: nextDestination,
+                currency: nextCurrency || tripData.currency,
+              });
+            }}
             className="w-full pl-12 pr-4 py-3 bg-dark-card/50 border border-purple-500/30 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:bg-dark-card/80 text-white placeholder-gray-500 transition-all duration-300 shadow-lg hover:shadow-xl"
           />
           <motion.div
@@ -68,6 +80,11 @@ const TripPlannerForm = ({ onSubmit }) => {
               className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-400 to-transparent rounded-full"
             />
           </div>
+          {localCurrency && localCurrency !== tripData.currency && localBudget && (
+            <p className="text-xs text-gray-400 mt-2">
+              Estimated local budget: {localBudget}
+            </p>
+          )}
         </motion.div>
 
         <motion.div
@@ -89,7 +106,10 @@ const TripPlannerForm = ({ onSubmit }) => {
               className="w-full pl-12 pr-4 py-3 bg-dark-card/50 border border-orange-500/30 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:bg-dark-card/80 text-white transition-all duration-300 shadow-lg hover:shadow-xl appearance-none cursor-pointer"
             >
               <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
               <option value="INR">INR (₹)</option>
+              <option value="IDR">IDR (Rp)</option>
+              <option value="JPY">JPY (¥)</option>
             </select>
             <motion.div
               className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-400 to-transparent rounded-full"

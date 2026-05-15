@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { Clock, MapPin, DollarSign } from 'lucide-react';
+import { Clock, MapPin } from 'lucide-react';
+import { formatPriceWithCurrency } from '../utils/helpers';
 
-const ItineraryDay = ({ day, activities = [], estimatedCost, meals = [] }) => {
+const ItineraryDay = ({ day, activities = [], estimatedCost, meals = [], currency = 'USD' }) => {
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -31,8 +32,7 @@ const ItineraryDay = ({ day, activities = [], estimatedCost, meals = [] }) => {
           Day {day}
         </motion.h3>
         <motion.div variants={item} className="flex items-center gap-2 text-green-400 font-semibold">
-          <DollarSign size={20} />
-          <span>${estimatedCost}</span>
+          <span className="text-xl">{formatPriceWithCurrency(estimatedCost, currency)}</span>
         </motion.div>
       </div>
 
